@@ -3,9 +3,7 @@
 clear all; clc; close all;
 
 % Start EIDORS
-% if exist('eidors','dir')==0
-    run 'C:\Users\Billy\OneDrive - Marquette University\EIDORS\eidors-v3.10-ng\eidors\startup';
-% end
+run 'path_to_startup\eidors\startup';
 
 
 %% Set up
