@@ -1178,6 +1178,7 @@ def predictGCNM(model, state_dicts, data_pr, params_pr):
         
         # Make predictions using the model
         predict_output = model.predict(data_pr, params_pr)
+        predict_output["x"] = data_pr[0]
         
         # Append training output
         predict_outputs.append(predict_output)

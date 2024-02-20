@@ -7,8 +7,13 @@ Created on Tue Feb 13 09:14:25 2024
 
 from scipy.io import loadmat, savemat
 import torch
-from main import GraphUNet, predictGCNM
+import matlab.engine
+from GN4IP import GraphUNet, predictGCNM
 
+# Start a matlab engine because it will be used in the updates
+eng = matlab.engine.start_matlab()
+eng.addpath(eng.genpath("../matlab/", nargout=1), nargout=0)
+print("Started a MATLAB engine and added to the path")
 
 # Load the data from a *.mat file and convert everything to tensors right away
 filename_load = "../data/test_data_v0.mat"
@@ -20,11 +25,17 @@ clusters_list = [torch.tensor(a[0].astype(int), dtype=torch.int).squeeze() - 1 f
 print("Loaded data for {} samples".format(X0.size(0)))
 
 # Standardize the data
-#Xmean = X.mean()
-#Xstd  = X.std()
-#Ymean = Y.mean()
-#Ystd  = Y.std()
-Xstandard = torch.cat((X0, X1), dim=2) #(X - Xmean) / Xstd
+X0mean = X0.mean()
+X0std  = X0.std()
+X1mean = X1.mean()
+X1std  = X1.std()
+Xstandard = torch.cat(((X0 - X0mean) / X0std, (X1 - X1mean) / X1std), dim=2)
+
+# Get standardizing info about network outputs too
+data = loadmat("../data/graph_gcnm_train_output_0.mat")
+Ymean = data["y_mean"]
+Ystd  = data["y_std"]
+
 
 # Organize the data and make a loader
 data_pr = (Xstandard, None, edge_index_list, clusters_list)
@@ -46,10 +57,19 @@ model = GraphUNet(
 # Set up other things
 def update1(x, yhat):
     print("Computing updates...")
-    output = torch.cat((x[:,:,0:1], yhat), dim=2)
+    # Get the new sigma by unstandardizing the network output
+    sigma = yhat * Ystd + Ymean
+    # Compute the update (convert from tensor to matlab double first)
+    sigma_mat = matlab.double(sigma.cpu().detach().numpy())
+    del_sigma_mat = eng.update_function(sigma_mat, filename_load)
+    del_sigma = torch.Tensor(del_sigma_mat).unsqueeze(dim=2)
+    # Standardize these and concatenate to form next network's input
+    sigma = (sigma - sigma.mean()) / sigma.std()
+    del_sigma = (del_sigma - del_sigma.mean()) / del_sigma.std()
+    output = torch.cat((sigma, del_sigma), dim=2)
     return output
 params_pr = {
-    "n_iterations" : 2,
+    "n_iterations" : 5,
     "device" : model.getDevice(),
     "update_function" : update1,
     "print_freq" : 1
@@ -68,9 +88,10 @@ print("Predicted with a GCNM. Output list of dict has keys:", predict_outputs[0]
 # Save some data
 filename_save = "../data/graph_gcnm_test_output_v0_model_{}.mat"
 for i, predict_output in enumerate(predict_outputs):
+    predict_output["yhat"] = predict_output["yhat"] * Ystd + Ymean
     for key in predict_output.keys():
         if type(predict_output[key]) is torch.Tensor:
             predict_output[key] = predict_output[key].detach().squeeze().numpy()
     savemat(filename_save.format(i), predict_output)
-    print("Saved output as {}".format(filename_save))
+    print("Saved output as {}".format(filename_save.format(i)))
 

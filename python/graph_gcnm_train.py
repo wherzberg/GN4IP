@@ -8,7 +8,7 @@ Created on Tue Feb 13 07:27:01 2024
 from scipy.io import loadmat, savemat
 import torch
 import matlab.engine
-from main import GraphUNet, fitGCNM
+from GN4IP import GraphUNet, fitGCNM
 
 # Start a matlab engine because it will be used in the updates
 eng = matlab.engine.start_matlab()
@@ -72,14 +72,14 @@ def update1(x, yhat):
     output = torch.cat((sigma, del_sigma), dim=2)
     return output
 params_tr = {
-    "n_iterations" : 2,
+    "n_iterations" : 5,
     "batch_size" : 16,
     "device" : model.getDevice(),
     "learning_rate" : 0.001,
-    "max_epochs" : 2,
+    "max_epochs" : 500,
     "loss_function" : lossL2,
     "update_function" : update1,
-    "patience" : 10,
+    "patience" : 20,
     "print_freq" : 1
 }
 
@@ -96,6 +96,8 @@ for i, training_output in enumerate(training_outputs):
     print("Saved the model as {}".format(filename_model.format(i)))
     
     del training_output["state_dict"]
+    training_output["y_mean"] = Ymean
+    training_output["y_std"] = Ystd
     for key in training_output.keys():
         if type(training_output[key]) is torch.Tensor:
             training_output[key] = training_output[key].detach().squeeze().numpy()
