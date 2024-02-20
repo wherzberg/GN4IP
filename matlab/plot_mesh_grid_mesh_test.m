@@ -1,7 +1,7 @@
 % Check the mesh to grid to mesh test data
 
 clear all; clc; close all;
-run 'C:\Users\Billy\OneDrive - Marquette University\EIDORS\eidors-v3.10-ng\eidors\startup';
+run 'path_to_startup\eidors\startup';
 
 
 %% Setup
