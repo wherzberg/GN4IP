@@ -1,7 +1,7 @@
 % Check the test results
 
 clear all; clc; close all;
-run 'path_to_startup\eidors\startup';
+run 'C:\Users\Billy\OneDrive - Marquette University\EIDORS\eidors-v3.10-ng\eidors\startup';
 
 
 %% Load the test results and reconstruction model
@@ -41,12 +41,12 @@ for i = 1:3
     % Network input (grid)
     ax(4) = nexttile;
     imagesc(flipud(reshape(X2(i, closest_elements), n_pixels, n_pixels)));
-    axis image; axis off; caxis([-0.05 0.35]);
+    axis image; axis off; clim([-0.05 0.35]);
     colorbar
     % Network output (grid)
     ax(5) = nexttile;
     imagesc(flipud(squeeze(yhat(i, :, :))'));
-    axis image; axis off; caxis([-0.05 0.35]);
+    axis image; axis off; clim([-0.05 0.35]);
     colorbar
 
 end
